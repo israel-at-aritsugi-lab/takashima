@@ -47,10 +47,13 @@ def mse(pred_re,img_gray):
 def parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--batchsize', default=-1, type=int)
-    parser.add_argument('--savepath', default="../model", type=str)  
-    parser.add_argument('--datapath', default="../data/TrainDataset", type=str) 
+    # parser.add_argument('--savepath', default="../model", type=str)  
+    # parser.add_argument('--datapath', default="../data/TrainDataset", type=str) 
+    parser.add_argument('--savepath', default="/nas.dbms/ikuto/datag-tool/resources/model_weights", type=str)  
+    parser.add_argument('--datapath', default="../gradio_model_dataset/TrainDataset_AI_car", type=str) 
     parser.add_argument('--checkpoint',default=None,type=str)
-    parser.add_argument('--lr', default=0.06, type=float)
+    # parser.add_argument('--lr', default=0.06, type=float)
+    parser.add_argument('--lr', default=0.01, type=float)
     parser.add_argument('--epoch', default=80, type=int)
     parser.add_argument('--wd', default=0.0005, type=float)
     parser.add_argument('--fr', default=0.025, type=float)
@@ -67,7 +70,7 @@ def train(Dataset, Network):
     loader = torch.utils.data.DataLoader(data,
                                          batch_size=args.batchsize,
                                          shuffle=True,
-                                         num_workers=8,
+                                         num_workers=0,
                                          pin_memory=True,
                                          collate_fn=data.collate)
 
@@ -151,7 +154,7 @@ def train(Dataset, Network):
         if epoch==cfg.epoch-1:
             if not os.path.exists(cfg.savepath):
                 os.makedirs(cfg.savepath)
-            torch.save(net.state_dict(), cfg.savepath + '/model-' + str(epoch + 1))
+            torch.save(net.state_dict(), cfg.savepath + '/model-1000AIcar+500AIcar_explanation-' + str(epoch + 1))
 
 if __name__ == '__main__': 
     train(dataset, FRINet)

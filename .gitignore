@@ -1,0 +1,5 @@
+# resources フォルダ内のすべてのファイルを無視
+pre/
+
+# data フォルダ内のすべてのファイルを無視
+gradio_model_dataset/

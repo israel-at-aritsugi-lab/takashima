@@ -133,6 +133,44 @@ def PIL_randomCrop(image, label,edge=None):
     return image.crop(random_region), label.crop(random_region)
 ########################### Dataset Class ###########################
 class Data(Dataset):
+    #元々------------------------------------------------------------------------
+    # def __init__(self, cfg):
+    #     self.cfg        = cfg
+    #     self.normalize  = Normalize(mean=cfg.mean, std=cfg.std)
+    #     self.resize     = Resize(448, 448)
+    #     self.resizet    = Resize(448, 448)
+    #     self.totensor   = ToTensor()
+    #     self.samples    = []
+    #     # lst = glob.glob(cfg.datapath +'/mask/'+'*.png')
+    #     lst = glob.glob(cfg.datapath +'/mask/'+'*.jpg')
+    #     for each in lst:
+    #         img_name = each.split("/")[-1]
+    #         img_name = img_name.split(".")[0]
+    #         self.samples.append(img_name)
+    # def __getitem__(self, idx):
+    #     name  = self.samples[idx]
+    #     tig='.jpg'
+    #     image = rgb_loader(self.cfg.datapath+'/image/'+name+tig)
+    #     # mask  = binary_loader(self.cfg.datapath+'/mask/' +name+'.png')
+    #     mask  = binary_loader(self.cfg.datapath+'/mask/' +name+'.jpg')
+    #     edge  = binary_loader(self.cfg.datapath+'/image/'+name+tig)
+    #     if self.cfg.mode=='train':
+    #         image,mask,edge = random_flip(image,mask,edge=edge)
+    #         image,mask,edge = PIL_randomCrop(image,mask,edge=edge)
+    #         image,mask,edge = randomRotation(image,mask,edge=edge)
+    #         image = colorEnhance(image)
+    #         image = np.asarray(image).astype(np.float32)
+    #         mask = np.asarray(mask).astype(np.float32)
+    #         edge = np.asarray(edge).astype(np.float32)
+    #         image, mask, edge = self.resize(image, mask, edge)
+    #         image, mask, edge = self.normalize(image, mask, edge)
+    #         hf = laplacian(image)
+    #         return image.copy(), hf.copy(),mask.copy(),edge.copy()
+    #元々------------------------------------------------------------------------
+
+
+    
+
     def __init__(self, cfg):
         self.cfg        = cfg
         self.normalize  = Normalize(mean=cfg.mean, std=cfg.std)
@@ -140,30 +178,63 @@ class Data(Dataset):
         self.resizet    = Resize(448, 448)
         self.totensor   = ToTensor()
         self.samples    = []
-        lst = glob.glob(cfg.datapath +'/mask/'+'*.png')
 
-        for each in lst:
-            img_name = each.split("/")[-1]
-            img_name = img_name.split(".")[0]
-            self.samples.append(img_name)
+        # mask フォルダから拡張子なしのファイル名リストを取得
+        lst_jpg = glob.glob(os.path.join(cfg.datapath, 'mask', '*.jpg'))
+        lst_png = glob.glob(os.path.join(cfg.datapath, 'mask', '*.png'))
+        print(lst_jpg)
+        print(lst_png)
+
+        all_files = set()
+        for each in lst_jpg + lst_png:
+            img_name = os.path.splitext(os.path.basename(each))[0]
+            all_files.add(img_name)
+
+        self.samples = sorted(list(all_files))
+
     def __getitem__(self, idx):
-        name  = self.samples[idx]
-        tig='.jpg'
-        image = rgb_loader(self.cfg.datapath+'/image/'+name+tig)
-        mask  = binary_loader(self.cfg.datapath+'/mask/' +name+'.png')
-        edge  = binary_loader(self.cfg.datapath+'/image/'+name+tig)
-        if self.cfg.mode=='train':
-            image,mask,edge = random_flip(image,mask,edge=edge)
-            image,mask,edge = PIL_randomCrop(image,mask,edge=edge)
-            image,mask,edge = randomRotation(image,mask,edge=edge)
+        name = self.samples[idx]
+
+        # ファイルパス候補
+        image_path_jpg = os.path.join(self.cfg.datapath, 'image', name + '.jpg')
+        image_path_png = os.path.join(self.cfg.datapath, 'image', name + '.png')
+        mask_path_jpg  = os.path.join(self.cfg.datapath, 'mask', name + '.jpg')
+        mask_path_png  = os.path.join(self.cfg.datapath, 'mask', name + '.png')
+
+        # imageの読み込み（jpg優先）
+        if os.path.exists(image_path_jpg):
+            image = rgb_loader(image_path_jpg)
+            edge  = binary_loader(image_path_jpg)
+        elif os.path.exists(image_path_png):
+            image = rgb_loader(image_path_png)
+            edge  = binary_loader(image_path_png)
+        else:
+            raise FileNotFoundError(f"No image file found for {name} (.jpg or .png)")
+
+        # maskの読み込み（jpg優先）
+        if os.path.exists(mask_path_jpg):
+            mask = binary_loader(mask_path_jpg)
+        elif os.path.exists(mask_path_png):
+            mask = binary_loader(mask_path_png)
+        else:
+            raise FileNotFoundError(f"No mask file found for {name} (.jpg or .png)")
+
+        if self.cfg.mode == 'train':
+            image, mask, edge = random_flip(image, mask, edge=edge)
+            image, mask, edge = PIL_randomCrop(image, mask, edge=edge)
+            image, mask, edge = randomRotation(image, mask, edge=edge)
             image = colorEnhance(image)
+
             image = np.asarray(image).astype(np.float32)
             mask = np.asarray(mask).astype(np.float32)
             edge = np.asarray(edge).astype(np.float32)
+
             image, mask, edge = self.resize(image, mask, edge)
             image, mask, edge = self.normalize(image, mask, edge)
             hf = laplacian(image)
-            return image.copy(), hf.copy(),mask.copy(),edge.copy()
+
+            return image.copy(), hf.copy(), mask.copy(), edge.copy()
+
 
         else:
             image = np.asarray(image).astype(np.float32)

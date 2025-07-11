@@ -62,13 +62,16 @@ class LayerNorm(nn.Module):
         self.normalized_shape = (normalized_shape, )
     
     def forward(self, x):
+        # print(f"[LayerNorm] Input shape: {x.shape}")
         if self.data_format == "channels_last":
             return F.layer_norm(x, self.normalized_shape, self.weight, self.bias, self.eps)
         elif self.data_format == "channels_first":
             u = x.mean(1, keepdim=True)
+            # print(f"[LayerNorm] Before normalization: {torch.cuda.memory_allocated()/1024**2:.1f} MB")
             s = (x - u).pow(2).mean(1, keepdim=True)
             x = (x - u) / torch.sqrt(s + self.eps)
             x = self.weight[:, None, None] * x + self.bias[:, None, None]
+            # print(f"[LayerNorm] After normalization: {torch.cuda.memory_allocated()/1024**2:.1f} MB")
             return x
     def initialize(self):
         pass
